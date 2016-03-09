@@ -1,0 +1,1 @@
+<img alt="<?php print $data['alt']; ?>" title="<?php print $data['title']; ?>" class="<?php print $classes; ?>" src="<?php print "/imgres/" . $effects['imgres_width'] . "/" . $effects['imgres_height'] . "?" . $uri; ?>" />

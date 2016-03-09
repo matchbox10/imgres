@@ -1,0 +1,41 @@
+<?php
+
+function imgres_schema() {
+    
+  $schema['imgres_styles'] = array(
+  'description' => 'The base table for nodes.',
+  'fields' => array(
+    'id' => array(
+      'description' => 'Unique Field Identifier',
+      'type' => 'serial',
+      'not null' => TRUE,
+    ),
+    'style_name' => array(
+      'description' => 'The name of the style to be applied',
+      'type' => 'varchar',
+      'length' => '80',
+      'not null' => TRUE,
+    ),
+    'key' => array(
+      'description' => 'Key to check against for images created; created by dimensions',
+      'type' => 'varchar',
+      'length' => '80',
+      'not null' => TRUE,
+    ),
+    'data' => array(
+      'description' => 'Client ID',
+      'type' => 'text',
+      'size' => 'medium',
+      'not null' => TRUE,
+    ),
+  ),
+  'primary key' => array('id'),
+  'indexes' => array(
+    'style_name' => array('style_name'),
+  ),
+);
+  
+  
+  return $schema;
+}
+ 

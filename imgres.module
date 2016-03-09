@@ -1,0 +1,263 @@
+<?php
+
+function pr($data) {
+          print "<pre>";
+          print_r($data);
+          print "</pre>";  
+}
+
+#Set up Definitions
+define('DEFAULT_IMGRES', 'http://s3.amazonaws.com/37assets/svn/765-default-avatar.png');
+
+# Set up Permissions
+
+function imgres_permission() {
+  return array(
+    'administer_imgres_settings' => array(
+      'title' => t('Administer Imgres'),
+      'description' => t('Set up defaults for module.'),
+    ),
+    'create_imgres_style' => array(
+      'title' => t('Create Imgress Style'),
+      'description' => t('Allowed to create new style from URL'),
+    ),  
+  );
+}
+
+function imgres_menu() {
+    $items['admin/config/media/imgres'] = array(
+        'title' => 'Imgres',
+        'description' => t('Create Styles via urls'),
+        'page callback' => 'imgres_setup',
+        'page arguments' => array(4), // arguments for the callback function 'imgres_setup'
+        'access arguments' => array('administer_imgres_settings'),
+        'type' => MENU_NORMAL_ITEM,
+    );
+    
+    $items['imgres/%/%'] = array(
+        'page callback' => 'imgres_output',
+        'page arguments' => array(1,2), // arguments for the callback function 'imgres_output'
+        'access arguments' => array('create_imgres_style'),
+        'type' => MENU_CALLBACK,
+    );
+    
+
+    return $items;
+  }
+  
+  function imgres_setup($data = 'Hello') {
+      
+      $data = "Hello";
+      
+      return $data;
+  }
+  
+  function imgres($width,$height,$uri) {
+      
+      //if uri is blank give default return 
+      if(empty($uri)) {
+          return DEFAULT_IMGRES;
+      }
+      
+      //Create Style Name
+      $styleName = 'imgres_' . $width . 'x' . $height;
+      
+      $listStyles = image_styles();
+      //Check if Style already Exists
+      if(isset($listStyles[$styleName])) {
+          return image_style_url($styleName, $uri);
+      } else {
+          $effect = array('name' => 'image_scale_and_crop');
+          $newUri = imgres_createStyle($width,$height,$effect);
+          return image_style_url($styleName, $uri);
+      }
+  }
+  
+  //Function used in link to provide URL
+  function imgres_output($width,$height) {
+    
+    //check manual calling of Function
+    if($uri = filter_input(INPUT_GET, 'l')) {
+        
+    } elseif($nid = filter_input(INPUT_GET, 'n')) {
+        //Load image_field using node ID
+        $node = entity_load_single('node',$nid);
+        //manually assign a field
+        if($field = filter_input(INPUT_GET, 'field')) {
+            
+            $uri = imgres_object_uri($node,$field);
+        } else {
+
+            $uri = imgres_object_uri($node);
+        }
+    } else {
+        //retrieve standard image_field
+        $node = menu_get_object();
+        //$uri = $node->image_field[0]['und']->uri;
+        $uri = imgres_object_uri($node);
+    }
+    
+    //Print out Image
+    $image = imgres($width,$height,$uri);
+    
+    //Ensure Export is recognised as an image
+    header('Content-type: image/jpeg');
+    //header('Content-Length: ' . filesize($image));
+    print readfile($image);
+    
+    //ensure full bootstrap is not loaded
+    drupal_exit();
+  }
+  
+  //Get URI from Object
+  function imgres_object_uri($object, $field = 'field_image') {
+      
+      //Check if Count parameter has been set
+      if(filter_input(INPUT_GET, 'c')) {
+          $count = filter_input(INPUT_GET, 'c');
+      } else {
+          $count = 0;
+      }
+      
+      //Check is Default
+      if($field == 'field_image') {
+          //Remove Translation
+          $dataItems = reset($object->field_image);
+
+      } else {
+          //convert object to Array
+          $object = (array) $object;
+          $dataItems = $object[$field];
+      }
+
+      //return The image URI
+      $data = $dataItems[$count]['uri'];
+      
+      return $data;
+      
+  }
+  
+  //create new image style based on dimensions
+  function imgres_createStyle($width,$height,$options = array('name' => 'image_scale')){
+    
+    //Create Style Name
+      $styleName = 'imgres_' . $width . 'x' . $height;
+      
+    //Create Image Style
+    $style = image_style_save(array('name' => $styleName));
+
+    //Update Effect for Image Style
+    $effect = array(
+      'name' => $options['name'],
+      'data' => array(
+        'width' => $width,
+        'height' => $height,
+        'upscale' => TRUE,
+      ),
+      'isid' => $style['isid'],
+    );
+        
+    //Save The Image Effect Permanantly
+    return image_effect_save($effect);
+
+  
+  }
+  
+function imgres_theme() {
+    $themeData =  array(
+        'field_imgres_image' => array(
+            'template' => 'templates/imgres-field-image', // define tpl.php inside module
+            'variables' => array(
+                'data' => NULL, 
+                'uri' => NULL, 
+                'effect' => NULL,
+                'classes' => array('imgres'),
+            ), //define $xxx so it will available in your xxx-xxx.tpl.php
+        ),
+    );
+    return $themeData;
+}
+  
+ /**
+ * Implements hook_field_formatter_info().
+ */
+function imgres_field_formatter_info() {
+  return array(
+    'imgres_image' => array(
+      'label' => t('Imgres Image'),
+      'field types' => array('image'),
+        'settings' => array('imgres_height' => 200, 'imgres_width' => 300),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_formatter_view().
+ */
+function imgres_field_formatter_view($entity_type, $entity, $field, $instance, $lang_code, $items, $display) {
+  $elements = array();
+  if ($display['type'] == 'imgres_image') {
+    foreach ($items as $delta => $item) {
+        /*dsm($item);
+        dsm($display);*/
+      $classes = array('imgres', 'imgres_'.$display['settings']['imgres_width'] . "x" . $display['settings']['imgres_height']);  
+      $elements[$delta] = array(
+        '#markup' => theme('field_' . $display['type'], array('classes' => implode(' ',$classes), 'data' => $item ,'uri' => drupal_http_build_query(array('l' => $item['uri'])), 'effects' => $display['settings'])),
+      );
+    }
+  }
+  return $elements;
+}
+
+/**
+ * Implements hook_field_formatter_settings_form().
+ */
+function imgres_field_formatter_settings_form($field, $instance, $view_mode, $form, &$form_state) {
+  $display = $instance['display'][$view_mode];
+  $settings = $display['settings'];
+
+  $element = array();
+
+  if ($display['type'] == 'imgres_image') {
+    $element['imgres_width'] = array(
+      '#title' => t('Width'),
+      '#type' => 'textfield',
+      '#field_suffix' => t('px'),
+      '#size' => 5,
+      '#default_value' => $settings['imgres_width'] ? $settings['imgres_width'] : 0,
+      '#element_validate' => array('element_validate_integer_positive'),
+      '#required' => TRUE,
+    );
+    $element['imgres_height'] = array(
+      '#title' => t('Height'),
+      '#type' => 'textfield',
+      '#field_suffix' => t('px'),
+      '#size' => 5,
+      '#default_value' => $settings['imgres_height'] ? $settings['imgres_height'] : 0,
+      '#element_validate' => array('element_validate_integer_positive'),
+      '#required' => TRUE,
+    );
+  }
+
+  return $element;
+
+}
+
+/**
+ * Implements hook_field_formatter_settings_summary().
+ */
+function imgres_field_formatter_settings_summary($field, $instance, $view_mode) {
+    $display = $instance['display'][$view_mode];
+    $settings = $display['settings'];
+
+    $summary = array();
+
+    if (isset($settings['imgres_width']) && isset($settings['imgres_height'])) {
+        $summary[] = t('Imgres Size: @width x @height', array('@width' => $settings['imgres_width'], '@height' => $settings['imgres_height']));
+    }
+    else {
+        $summary[] = t('Imgres Settings');
+    }
+
+    return implode('<br />', $summary);
+}
