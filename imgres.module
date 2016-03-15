@@ -1,11 +1,5 @@
 <?php
 
-function pr($data) {
-          print "<pre>";
-          print_r($data);
-          print "</pre>";  
-}
-
 #Set up Definitions
 define('DEFAULT_IMGRES', 'http://s3.amazonaws.com/37assets/svn/765-default-avatar.png');
 
