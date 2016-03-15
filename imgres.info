@@ -2,5 +2,5 @@ name = Imgres
 description = Create image styles and apply them on the fly 
 core = 7.x
 package = Images
-version = 0.2a
+version = 1.x
 dependencies[] = image
