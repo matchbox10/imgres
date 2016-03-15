@@ -38,4 +38,16 @@ function imgres_schema() {
   
   return $schema;
 }
- 
+
+function imgres_uninstall() {
+    //Remove Variables
+    variable_del('imgres_cron_flush');
+    variable_del('imgres_cron_delete');
+    
+    //Remove all Image Styles associated with Imgres
+    foreach (image_styles() as $style) {
+        if(strpos($style['name'], 'mgres_')) {
+            image_style_delete($style);
+        }
+    }
+}

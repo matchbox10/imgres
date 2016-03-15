@@ -1,7 +1,12 @@
 <?php
 
+#Setup includes
+module_load_include('inc', 'imgres', 'imgres.form');
+
 #Set up Definitions
 define('DEFAULT_IMGRES', 'http://s3.amazonaws.com/37assets/svn/765-default-avatar.png');
+define('IMGRES_VAR_FLUSH', variable_get('imgres_cron_flush', FALSE));
+define('IMGRES_VAR_DELETE', variable_get('imgres_cron_delete', FALSE));
 
 # Set up Permissions
 
@@ -18,12 +23,14 @@ function imgres_permission() {
   );
 }
 
+
+// Set up Menu Items
 function imgres_menu() {
     $items['admin/config/media/imgres'] = array(
-        'title' => 'Imgres',
+        'title' => 'Imgres Setup',
         'description' => t('Create Styles via urls'),
-        'page callback' => 'imgres_setup',
-        'page arguments' => array(4), // arguments for the callback function 'imgres_setup'
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('imgres_setup_form'),
         'access arguments' => array('administer_imgres_settings'),
         'type' => MENU_NORMAL_ITEM,
     );
@@ -34,14 +41,31 @@ function imgres_menu() {
         'access arguments' => array('create_imgres_style'),
         'type' => MENU_CALLBACK,
     );
-    
+    $items['imgres/%'] = array(
+        'page callback' => 'imgres_functions',
+        'page arguments' => array(1), // arguments for the callback function 'imgres_output'
+        'access arguments' => array('administer_imgres_settings'),
+        'type' => MENU_CALLBACK,
+    );
 
     return $items;
   }
   
+  // Cron Settings
+  function imgres_cron() {
+        //clear out image styles 
+        if(IMGRES_VAR_FLUSH) {
+            imgres_flushAll();
+        }
+        if(IMGRES_VAR_DELETE) {
+            imgres_clearAll();
+        }
+  }
+  
+  
   function imgres_setup($data = 'Hello') {
       
-      $data = "Hello";
+      $data = "Hello, Welcome to Imgres";
       
       return $data;
   }
@@ -255,3 +279,46 @@ function imgres_field_formatter_settings_summary($field, $instance, $view_mode) 
 
     return implode('<br />', $summary);
 }
+
+/**
+ * Remove all imgres styles to ensure redundand styles are not left over 
+ */
+ function imgres_clearAll() {
+     foreach (image_styles() as $style) {
+        if(strpos($style['name'], 'mgres_')) {
+            image_style_delete($style);
+        }
+      }
+ }
+ 
+ /**
+ * Flush all imgres images to ensure redundand styles are not left over 
+ */
+ function imgres_flushAll() {
+     foreach (image_styles() as $style) {
+        if(strpos($style['name'], 'mgres_')) {
+            image_style_flush($style);
+        }
+      }
+ }
+ 
+ /**
+  * Perform functions via the hook_menu and parameters
+  */
+ function imgres_functions($option = 'flush') {
+     switch ($option) {
+         case 'delete' :
+            imgres_clearAll();
+            drupal_set_message('All Imgres styles have been cleared');
+            break;
+        case 'flush' :
+            imgres_flushAll();
+            drupal_set_message('All Imgres images have been flushed');
+            break;
+        default :
+            return "Hello";
+      }
+      //After performing function return to the previous page
+      $path = filter_input(INPUT_GET, 'destination');
+      drupal_goto($path);
+ }
