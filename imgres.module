@@ -7,6 +7,7 @@ module_load_include('inc', 'imgres', 'imgres.form');
 define('DEFAULT_IMGRES', 'http://s3.amazonaws.com/37assets/svn/765-default-avatar.png');
 define('IMGRES_VAR_FLUSH', variable_get('imgres_cron_flush', FALSE));
 define('IMGRES_VAR_DELETE', variable_get('imgres_cron_delete', FALSE));
+DEFINE('IMGRES_DEFAULT_EFFECT', 'image_scale_and_crop');
 
 # Set up Permissions
 
@@ -77,15 +78,18 @@ function imgres_menu() {
           return DEFAULT_IMGRES;
       }
       
+      //Setup Effects
+      $effectName = imgres_validStyle(filter_input(INPUT_GET, 'e'));
+      
       //Create Style Name
-      $styleName = 'imgres_' . $width . 'x' . $height;
+      $styleName = 'imgres_' . $width . 'x' . $height . '_' . $effectName;
       
       $listStyles = image_styles();
       //Check if Style already Exists
       if(isset($listStyles[$styleName])) {
           return image_style_url($styleName, $uri);
       } else {
-          $effect = array('name' => 'image_scale_and_crop');
+          $effect = array('name' => $effectName);
           $newUri = imgres_createStyle($width,$height,$effect);
           return image_style_url($styleName, $uri);
       }
@@ -155,14 +159,17 @@ function imgres_menu() {
       
   }
   
-  //create new image style based on dimensions
+  /**
+   * Create new image style based on dimensions
+   */
   function imgres_createStyle($width,$height,$options = array('name' => 'image_scale')){
     
     //Create Style Name
-      $styleName = 'imgres_' . $width . 'x' . $height;
+    $styleName = 'imgres_' . $width . 'x' . $height . '_' . $options['name'];
+    $styleLabel = 'Imgres autostyle: ' . $width . 'px x ' . $height . 'px (' . $options['name'] . ')';
       
     //Create Image Style
-    $style = image_style_save(array('name' => $styleName));
+    $style = image_style_save(array('name' => $styleName, 'label' => $styleLabel));
 
     //Update Effect for Image Style
     $effect = array(
@@ -321,4 +328,16 @@ function imgres_field_formatter_settings_summary($field, $instance, $view_mode) 
       //After performing function return to the previous page
       $path = filter_input(INPUT_GET, 'destination');
       drupal_goto($path);
+ }
+ 
+ /**
+  * Check to see if you are parsing a compaitble image effect, if not reyurn default
+  */
+ function imgres_validStyle($style){
+     $stylelist =  array('image_resize','image_scale','image_scale_and_crop','image_desaturate','image_crop');
+     if(in_array($style, $stylelist)) {
+         return $style;
+     } else {
+         return IMGRES_DEFAULT_EFFECT;
+     }
  }
