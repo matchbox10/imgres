@@ -250,7 +250,7 @@ function imgres_field_formatter_settings_form($field, $instance, $view_mode, $fo
       '#field_suffix' => t('px'),
       '#size' => 5,
       '#default_value' => $settings['imgres_width'] ? $settings['imgres_width'] : 0,
-      '#element_validate' => array('element_validate_integer_positive'),
+      '#element_validate' => array('element_validate_integer'),
       '#required' => TRUE,
     );
     $element['imgres_height'] = array(
@@ -259,7 +259,7 @@ function imgres_field_formatter_settings_form($field, $instance, $view_mode, $fo
       '#field_suffix' => t('px'),
       '#size' => 5,
       '#default_value' => $settings['imgres_height'] ? $settings['imgres_height'] : 0,
-      '#element_validate' => array('element_validate_integer_positive'),
+      '#element_validate' => array('element_validate_integer'),
       '#required' => TRUE,
     );
   }
