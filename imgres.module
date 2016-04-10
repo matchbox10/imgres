@@ -123,7 +123,7 @@ function imgres_menu() {
     $image = imgres($width,$height,$uri);
     
     //Ensure Export is recognised as an image
-    //header('Content-type: image/jpeg');
+    header('Content-type: image/jpeg');
     //header('Content-Length: ' . filesize($image));
     print readfile($image);
     
